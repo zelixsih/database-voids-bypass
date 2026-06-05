@@ -1,58 +1,55 @@
 #!/bin/bash
 
 # Color
-BLUE='\033[0;34m'       
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-WHITE='\033[0;37m'
+BLUE='\033;34m'       
+RED='\033;31m'
+GREEN='\033;32m'
+YELLOW='\033;33m'
+WHITE='\033;37m'
 NC='\033[0m'
 
-# Helper function untuk generate string acak (pengganti generateReadableString di Node.js)
-generate_random_string() {
-  local length=$1
-  tr -dc 'a-z0-9' < /dev/urandom | head -c "$length"
-}
+# Konfigurasi Theme Installer
+PANEL_DIR="/var/www/pterodactyl"
+BACKUP_DIR="/var/www/pterodactyl_backup_$(date +%F_%H-%M)"
 
 # Display welcome message
 display_welcome() {
-  clear
   echo -e ""
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BLUE}[+]                                                 [+]${NC}"
   echo -e "${WHITE}[+]                AUTO INSTALLER THEMA             [+]${NC}"
-  echo -e "${WHITE}[+]                  © RevanBotz                    [+]${NC}"
+  echo -e "${WHITE}[+]                  © RevanBotz                [+]${NC}"
   echo -e "${BLUE}[+]                                                 [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e ""
-  echo -e "Script ini dibuat untuk mempermudah penginstalasian thema pterodactyl,"
+  echo -e "script ini di buat untuk mempermudah penginstalasian thema pterodactyle,"
   echo -e "dilarang keras untuk dikasih gratis."
   echo -e ""
   echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠 :"
-  echo -e "@revanbotz"
-  echo -e "ＣＲＥＤＩＴＳ :"
-  echo -e "@revanbotz"
+  echo -e "@lixzsukatobrut"
+  echo -e "𝗖𝗥𝗘𝗗𝗜𝗧𝗦 :"
+  echo -e "@lixzsukatobrut"
   sleep 4
   clear
 }
 
-# Update and install jq
+#Update and install jq
 install_jq() {
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BLUE}[+]             UPDATE & INSTALL JQ                 [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  sudo apt update && sudo apt install -y jq unzip wget curl
+  sudo apt update && sudo apt install -y jq
   if [ $? -eq 0 ]; then
     echo -e "                                                       "
     echo -e "${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${GREEN}[+]         INSTALL DEPENDENSI BERHASIL             [+]${NC}"
+    echo -e "${GREEN}[+]              INSTALL JQ BERHASIL                [+]${NC}"
     echo -e "${GREEN}[+] =============================================== [+]${NC}"
   else
     echo -e "                                                       "
     echo -e "${RED}[+] =============================================== [+]${NC}"
-    echo -e "${RED}[+]         INSTALL DEPENDENSI GAGAL                [+]${NC}"
+    echo -e "${RED}[+]              INSTALL JQ GAGAL                   [+]${NC}"
     echo -e "${RED}[+] =============================================== [+]${NC}"
     exit 1
   fi
@@ -61,204 +58,355 @@ install_jq() {
   clear
 }
 
-# Check user token
+#Check user token
 check_token() {
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BLUE}[+]               LICENSY ZERO DEVELOPER            [+]${NC}"
+  echo -e "${BLUE}[+]               LICENSY ZERO DEVELOPER           [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   echo -e "${YELLOW}MASUKAN AKSES TOKEN :${NC}"
   read -r USER_TOKEN
 
-  if [ "$USER_TOKEN" = "revan" ]; then
+  if [ "$USER_TOKEN" = "zelix" ]; then
     echo -e "${GREEN}AKSES BERHASIL${NC}"
   else
-    echo -e "${RED}Buy dulu Gih Ke ZeroDev${NC}"
-    echo -e "${YELLOW}TELEGRAM : @ext4you${NC}"
-    echo -e "${YELLOW}WHATSAPP : 6287767050506${NC}"
-    echo -e "${YELLOW}HARGA TOKEN : 10K FREE UPDATE JIKA ADA TOKEN BARU${NC}"
-    echo -e "${YELLOW}©zerodeveloper${NC}"
+    echo -e "${GREEN}Buy dulu Gih Ke Zelix${NC}"
+    echo -e "${YELLOW}TELEGRAM : @lixzsukatobrut${NC}"
+    echo -e "${YELLOW}WHATSAPP : 628818585370${NC}"
+    echo -e "${YELLOW}HARGA TOKEN : 2K FREE UPDATE JIKA ADA TOKEN BARU${NC}"
+    echo -e "${YELLOW}©Author Zelix${NC}"
     exit 1
   fi
   clear
 }
 
-# 1. Install theme
-install_theme() {
-  while true; do
+# --- FUNGSI-FUNGSI UTAMA MULTI-THEME INSTALLER ---
+
+backup_panel() {
+    echo -e "${YELLOW}[+] Membuat Backup Panel...${NC}"
+    mkdir -p "$BACKUP_DIR"
+    rsync -av --exclude 'storage' --exclude 'node_modules' --exclude '.git' "$PANEL_DIR/" "$BACKUP_DIR/"
+    echo -e "${GREEN}[✓] Backup tersimpan di: $BACKUP_DIR${NC}"
+}
+
+install_dependencies() {
+    echo -e "${YELLOW}[+] Menginstall Dependencies (zip, unzip, curl, tar, git)...${NC}"
+    apt update -y
+    apt install -y zip unzip curl tar git
+}
+
+install_build_tools() {
+    echo -e "${YELLOW}[+] Mengecek Build Tools (NodeJS & Yarn)...${NC}"
+    unset NODE_OPTIONS
+    if command -v node &> /dev/null; then
+        NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+        if [ "$NODE_VERSION" -lt 20 ]; then
+            echo -e "${YELLOW}[!] Node.js versi lama terdeteksi ($NODE_VERSION). Mengupgrade ke Node.js 20...${NC}"
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt install -y nodejs
+        fi
+    else
+        echo -e "Install NodeJS..."
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt install -y nodejs
+    fi
+    if ! command -v yarn &> /dev/null; then
+        echo -e "Install Yarn..."
+        npm i -g yarn
+    fi
+}
+
+fix_permissions() {
+    echo -e "${YELLOW}[+] Memperbaiki Permission...${NC}"
+    chown -R www-data:www-data "$PANEL_DIR"
+    chmod -R 755 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
+}
+
+# FUNGSI INSTALASI ELYSIUM THEME
+install_elysium_theme() {
     echo -e "                                                       "
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
-    echo -e "${WHITE}[+]                   SELECT THEME                  [+]${NC}"
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
+    echo -e "${GREEN}[+] =============================================== [+]${NC}"
+    echo -e "${GREEN}[+]             INSTALLASI ELYSIUM THEME           [+]${NC}"
+    echo -e "${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
-    echo -e "PILIH THEME YANG INGIN DI INSTALL"
-    echo "1. stellar"
-    echo "2. billing"
-    echo "3. enigma"
-    echo "x. kembali"
-    echo -e "masukan pilihan (1/2/3/x) :"
-    read -r SELECT_THEME
-    case "$SELECT_THEME" in
-      1)
-        THEME_URL="https://github.com/gitfdil1248/thema/raw/main/C2.zip"
-        break
-        ;;
-      2)
-        THEME_URL=$(echo -e "\x68\x74\x74\x70\x73\x3A\x2F\x2F\x67\x69\x74\x68\x75\x62\x2E\x63\x6F\x6D\x2F\x44\x49\x54\x5A\x5A\x31\x31\x32\x2F\x66\x6F\x78\x78\x68\x6F\x73\x74\x74\x2F\x72\x61\x77\x2F\x6D\x61\x69\x6E\x2F\x43\x31\x2E\x7A\x69\x70")
-        break
-        ;;
-      3)
-        THEME_URL="https://github.com/gitfdil1248/thema/raw/main/C3.zip"
-        break
-        ;; 
-      x|X)
-        return
-        ;;
-      *)
-        echo -e "${RED}Pilihan tidak valid, silahkan coba lagi.${NC}"
-        ;;
-    esac
-  done
-  
-  if [ -e /root/pterodactyl ]; then
-    sudo rm -rf /root/pterodactyl
+
+    REPO_URL="https://github.com/Bangsano/Autoinstaller-Theme-Pterodactyl.git"
+    TEMP_DIR="Autoinstaller-Theme-Pterodactyl"
+
+    git clone "$REPO_URL" "$TEMP_DIR" || { echo "Gagal mengkloning repositori."; return 1; }
+
+    sudo mv "$TEMP_DIR/ElysiumTheme.zip" /var/www/
+    unzip -o /var/www/ElysiumTheme.zip -d /var/www/
+    rm -rf "$TEMP_DIR" /var/www/ElysiumTheme.zip
+    cd /root
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg || true
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+    sudo apt update
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    nvm install 16
+    sudo apt install -y nodejs
+    apt install npm -y
+    npm i -g yarn
+    cd /var/www/pterodactyl
+    yarn
+    yarn build:production
+    php artisan migrate
+    php artisan view:clear
+
+    echo -e "                                                       "
+    echo -e "${GREEN}[+] =============================================== [+]${NC}"
+    echo -e "${GREEN}[+]          ELYSIUM THEME BERHASIL DIINSTALL       [+]${NC}"
+    echo -e "${GREEN}[+] =============================================== [+]${NC}"
+    echo -e "                                                       "
+}
+
+# FUNGSI MENU MASUKKAN MULTI-THEME
+install_multi_theme_menu() {
+  if [ ! -d "$PANEL_DIR" ]; then
+      echo -e "${RED}[!] Pterodactyl Panel tidak ditemukan di $PANEL_DIR${NC}"
+      echo -e "${YELLOW}Silakan install Pterodactyl Panel terlebih dahulu.${NC}"
+      sleep 3
+      return
   fi
-  wget -q "$THEME_URL"
-  sudo unzip -o "$(basename "$THEME_URL")"
-  
-  if [ "$SELECT_THEME" = "1" ]; then
-    echo -e "                                                       "
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
-    echo -e "${BLUE}[+]                  INSTALLASI THEMA               [+]${NC}"
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
-    echo -e "                                                                   "
-    sudo cp -rfT /root/pterodactyl /var/www/pterodactyl
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-    sudo apt install -y nodejs
-    sudo npm i -g yarn
-    cd /var/www/pterodactyl || return
-    yarn add react-feather
-    php artisan migrate
-    yarn build:production
-    php artisan view:clear
-    sudo rm /root/C2.zip
-    sudo rm -rf /root/pterodactyl
 
-    echo -e "                                                       "
-    echo -e "${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${GREEN}[+]                   INSTALL SUCCESS               [+]${NC}"
-    echo -e "${GREEN}[+] =============================================== [+]${NC}"
-    echo -e ""
-    sleep 2
-    clear
+  clear
+  echo -e "${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "${WHITE}[+]               PILIH MULTI THEME                 [+]${NC}"
+  echo -e "${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "1. ${GREEN}Blueprint Framework${NC} (Required for some extensions)"
+  echo -e "2. ${GREEN}Reviactyl${NC} (Full Remake, Modern UI)"
+  echo -e "3. ${GREEN}NookTheme${NC} (Clean, Modern, Open Source)"
+  echo -e "4. ${GREEN}Nightcore${NC} (Dark Mode, Purple Accents)"
+  echo -e "5. ${GREEN}Enola${NC} (Elegant Dark)"
+  echo -e "6. ${GREEN}Twilight${NC} (Deep Dark)"
+  echo -e "7. ${YELLOW}Stellar${NC} (Premium - Manual Upload)"
+  echo -e "8. ${GREEN}Recolor${NC} (Blueprint Extension)"
+  echo -e "9. ${YELLOW}Restore Original Pterodactyl${NC} (Kembali ke awal)"
+  echo -e "10. ${GREEN}Elysium Theme${NC} (Modern Glow Dynamic UI)"
+  echo -e "x. Kembali ke Menu Utama"
+  echo -e ""
+  read -p "Pilih menu (1-10/x): " THEME_CHOICE
 
-  elif [ "$SELECT_THEME" = "2" ]; then
-    echo -e "                                                       "
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
-    echo -e "${BLUE}[+]                  INSTALLASI THEMA               [+]${NC}"
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
-    echo -e "                                                       "
-    sudo cp -rfT /root/pterodactyl /var/www/pterodactyl
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-    sudo apt install -y nodejs
-    sudo npm i -g yarn
-    cd /var/www/pterodactyl || return
-    yarn add react-feather
-    php artisan billing:install stable
-    php artisan migrate
-    yarn build:production
-    php artisan view:clear
-    sudo rm /root/C1.zip
-    sudo rm -rf /root/pterodactyl
+  if [ "$THEME_CHOICE" == "x" ]; then
+      return
+  fi
 
-    echo -e "                                                       "
-    echo -e "${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${GREEN}[+]                  INSTALL SUCCESS                [+]${NC}"
-    echo -e "${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "                                                       "
-    sleep 2
-    clear
+  # Eksekusi install dependencies dasar
+  install_dependencies
 
-  elif [ "$SELECT_THEME" = "3" ]; then
-    echo -e "                                                       "
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
-    echo -e "${BLUE}[+]                  INSTALLASI THEMA               [+]${NC}"
-    echo -e "${BLUE}[+] =============================================== [+]${NC}"
-    echo -e "                                                                   "
+  case "$THEME_CHOICE" in
+    1)
+      backup_panel
+      echo -e "${BLUE}[+] Menginstall Blueprint Framework...${NC}"
+      cd "$PANEL_DIR"
+      export PTERODACTYL_DIRECTORY="$PANEL_DIR"
+      install_build_tools
+      echo -e "${YELLOW}[+] Menjalankan yarn install...${NC}"
+      npm i -g yarn
+      yarn install
+      echo -e "${YELLOW}[+] Menginstall dependencies tambahan (webpack, react)...${NC}"
+      yarn add cross-env webpack webpack-cli react react-dom --dev
+      wget --no-check-certificate "$(curl -s -k -H "User-Agent: Mozilla/5.0" https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep -o '"browser_download_url": *"[^"]*release.zip"' | head -n 1 | cut -d '"' -f 4)" -O "$PANEL_DIR/release.zip"
+      unzip -o release.zip
+      echo -e "${YELLOW}[+] Membuat konfigurasi .blueprintrc...${NC}"
+      echo 'WEBUSER="www-data";
+OWNERSHIP="www-data:www-data";
+USERSHELL="/bin/bash";' > "$PANEL_DIR/.blueprintrc"
+      chmod +x blueprint.sh
+      bash blueprint.sh
+      rm release.zip
+      echo -e "${YELLOW}[+] Memverifikasi instalasi Blueprint...${NC}"
+      if [ -f "/usr/local/bin/blueprint" ]; then
+          /usr/local/bin/blueprint -upgrade
+      elif command -v blueprint &> /dev/null; then
+          blueprint -upgrade
+      fi
+      fix_permissions
+      echo -e "${GREEN}[✓] Blueprint Framework berhasil diinstall!${NC}"
+      sleep 3
+      ;;
+    2)
+      backup_panel
+      echo -e "${BLUE}[+] Menginstall Reviactyl...${NC}"
+      cd "$PANEL_DIR"
+      php artisan down
+      curl -L -k -H "User-Agent: Mozilla/5.0" -o panel.tar.gz https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz
+      tar -xzvf panel.tar.gz
+      chmod -R 755 storage/* bootstrap/cache/
+      composer install --no-dev --optimize-autoloader
+      php artisan migrate --seed --force
+      php artisan view:clear
+      php artisan config:clear
+      fix_permissions
+      php artisan up
+      echo -e "${GREEN}[✓] Reviactyl berhasil diinstall!${NC}"
+      sleep 3
+      ;;
+    3)
+      backup_panel
+      echo -e "${BLUE}[+] Menginstall NookTheme...${NC}"
+      cd "$PANEL_DIR"
+      php artisan down
+      curl -L -k -H "User-Agent: Mozilla/5.0" -o panel.tar.gz https://github.com/Nookure/NookTheme/releases/latest/download/panel.tar.gz
+      tar -xzvf panel.tar.gz
+      chmod -R 755 storage/* bootstrap/cache/
+      composer install --no-dev --optimize-autoloader
+      php artisan migrate --seed --force
+      php artisan view:clear
+      php artisan config:clear
+      fix_permissions
+      php artisan up
+      echo -e "${GREEN}[✓] NookTheme berhasil diinstall!${NC}"
+      sleep 3
+      ;;
+    4)
+      backup_panel
+      echo -e "${BLUE}[+] Menginstall Nightcore...${NC}"
+      bash <(curl -s -k -H "User-Agent: Mozilla/5.0" https://raw.githubusercontent.com/NoPro200/Pterodactyl_Nightcore_Theme/main/install.sh)
+      fix_permissions
+      echo -e "${GREEN}[✓] Nightcore Theme berhasil diinstall!${NC}"
+      sleep 3
+      ;;
+    5)
+      backup_panel
+      install_build_tools
+      echo -e "${BLUE}[+] Menginstall Enola Theme...${NC}"
+      cd "$PANEL_DIR"
+      bash <(curl -s -k -H "User-Agent: Mozilla/5.0" https://raw.githubusercontent.com/Ferks-FK/Pterodactyl-AutoThemes/main/install.sh)
+      echo -e "${YELLOW}[!] Script installer external telah dijalankan.${NC}"
+      sleep 4
+      ;;
+    6)
+      backup_panel
+      install_build_tools
+      echo -e "${BLUE}[+] Menginstall Twilight Theme...${NC}"
+      bash <(curl -s -k -H "User-Agent: Mozilla/5.0" https://raw.githubusercontent.com/Ferks-FK/Pterodactyl-AutoThemes/main/install.sh)
+      echo -e "${YELLOW}[!] Script installer external telah dijalankan.${NC}"
+      sleep 4
+      ;;
+    7)
+      backup_panel
+      echo -e "${BLUE}[+] Menyiapkan Instalasi Stellar Theme...${NC}"
+      echo -e "${YELLOW}[!] Stellar adalah theme berbayar/premium.${NC}"
+      echo -e "Silakan upload file ${GREEN}stellar.zip${NC} ke folder /root/ di VPS ini."
+      read -p "Jika sudah diupload, tekan ENTER untuk melanjutkan..."
+      if [ -f "/root/stellar.zip" ]; then
+          cd "$PANEL_DIR"
+          php artisan down
+          cp /root/stellar.zip "$PANEL_DIR/"
+          unzip -o stellar.zip
+          chmod -R 755 storage/* bootstrap/cache/
+          composer install --no-dev --optimize-autoloader
+          php artisan migrate --seed --force
+          php artisan view:clear
+          php artisan config:clear
+          fix_permissions
+          php artisan up
+          echo -e "${GREEN}[✓] Stellar Theme berhasil diinstall!${NC}"
+      else
+          echo -e "${RED}[!] File /root/stellar.zip tidak ditemukan.${NC}"
+      fi
+      sleep 3
+      ;;
+    8)
+      backup_panel
+      echo -e "${BLUE}[+] Menginstall Recolor (Blueprint Extension)...${NC}"
+      cd "$PANEL_DIR"
+      if [ ! -f "$PANEL_DIR/blueprint.sh" ]; then
+          echo -e "${RED}[!] Blueprint Framework belum terinstall! Silakan install Menu 1 dulu.${NC}"
+          sleep 3
+          return
+      fi
+      RECOLOR_URL=$(curl -s -k -H "User-Agent: Mozilla/5.0" https://api.github.com/repos/BlueprintFramework/Extensions/releases/latest | grep -o '"browser_download_url": *"[^"]*recolor.blueprint"' | head -n 1 | cut -d '"' -f 4)
+      if [ -z "$RECOLOR_URL" ]; then
+          RECOLOR_URL="https://github.com/BlueprintFramework/Extensions/releases/download/recolor-latest/recolor.blueprint"
+      fi
+      wget --no-check-certificate "$RECOLOR_URL" -O "recolor.blueprint"
+      unset NODE_OPTIONS
+      if [ -f "recolor.blueprint" ]; then
+          if [ -f "/usr/local/bin/blueprint" ]; then
+              /usr/local/bin/blueprint -i recolor.blueprint
+          elif command -v blueprint &> /dev/null; then
+              blueprint -i recolor.blueprint
+          fi
+      fi
+      sleep 3
+      ;;
+    9)
+      echo -e "${YELLOW}[+] Mengembalikan ke Pterodactyl Original...${NC}"
+      cd "$PANEL_DIR"
+      php artisan down
+      curl -L -k -H "User-Agent: Mozilla/5.0" -o panel.tar.gz https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz
+      tar -xzvf panel.tar.gz
+      chmod -R 755 storage/* bootstrap/cache/
+      composer install --no-dev --optimize-autoloader
+      php artisan migrate --seed --force
+      php artisan view:clear
+      php artisan config:clear
+      fix_permissions
+      php artisan up
+      echo -e "${GREEN}[✓] Pterodactyl Original berhasil direstore!${NC}"
+      sleep 3
+      ;;
+    10)
+      backup_panel
+      install_elysium_theme
+      fix_permissions
+      sleep 3
+      ;;
+    *)
+      echo -e "${RED}Pilihan tidak valid!${NC}"
+      sleep 2
+      ;;
+  esac
 
-    echo -e "${YELLOW}Masukkan link wa (https://wa.me...) : ${NC}"
-    read -r LINK_WA
-    echo -e "${YELLOW}Masukkan link group (https://.....) : ${NC}"
-    read -r LINK_GROUP
-    echo -e "${YELLOW}Masukkan link channel (https://...) : ${NC}"
-    read -r LINK_CHNL
-
-    sudo sed -i "s|LINK_WA|$LINK_WA|g" /root/pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-    sudo sed -i "s|LINK_GROUP|$LINK_GROUP|g" /root/pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-    sudo sed -i "s|LINK_CHNL|$LINK_CHNL|g" /root/pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-    
-    sudo cp -rfT /root/pterodactyl /var/www/pterodactyl
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-    sudo apt install -y nodejs
-    sudo npm i -g yarn
-    cd /var/www/pterodactyl || return
-    yarn add react-feather
-    php artisan migrate
-    yarn build:production
-    php artisan view:clear
-    sudo rm /root/C3.zip
-    sudo rm -rf /root/pterodactyl
-
-    echo -e "                                                       "
-    echo -e "${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${GREEN}[+]                   INSTALL SUCCESS               [+]${NC}"
-    echo -e "${GREEN}[+] =============================================== [+]${NC}"
-    echo -e ""
-    sleep 5
-    clear
+  # Cek Nginx Nyamuk/Config Default
+  if [ ! -f "/etc/nginx/sites-available/pterodactyl.conf" ]; then
+      echo -e "${YELLOW}[+] Membuat konfigurasi Nginx default...${NC}"
+      cat <<EOF > /etc/nginx/sites-available/pterodactyl.conf
+server {
+    listen 80;
+    server_name \$PANEL_DOMAIN;
+    root /var/www/pterodactyl/public;
+    index index.php;
+    access_log /var/log/nginx/pterodactyl.app-access.log;
+    error_log  /var/log/nginx/pterodactyl.app-error.log error;
+    client_max_body_size 100m;
+    client_body_timeout 120s;
+    sendfile off;
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+    location ~ \.php$ {
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param PHP_VALUE "upload_max_filesize = 100M \n post_max_size=100M";
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        fastcgi_param HTTP_PROXY "";
+        fastcgi_intercept_errors off;
+        fastcgi_buffer_size 16k;
+        fastcgi_buffers 4 16k;
+        fastcgi_connect_timeout 300;
+        fastcgi_send_timeout 300;
+        fastcgi_read_timeout 300;
+    }
+    location ~ /\.ht {
+        deny all;
+    }
+}
+EOF
+      ln -s /etc/nginx/sites-available/pterodactyl.conf /etc/nginx/sites-enabled/pterodactyl.conf 2>/dev/null
+      systemctl restart nginx
   fi
 }
 
-# 2. Uninstall theme
-uninstall_theme() {
-  echo -e "                                                       "
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BLUE}[+]                    DELETE THEME                 [+]${NC}"
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  bash <(curl -s https://raw.githubusercontent.com/gitfdil1248/thema/main/repair.sh)
-  echo -e "                                                       "
-  echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${GREEN}[+]                 DELETE THEME SUKSES             [+]${NC}"
-  echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  sleep 2
-  clear
-}
+# --- FUNGSIONALITAS LAINNYA ---
 
-# 3. Configure Wings (Manual)
-configure_wings() {
-  echo -e "                                                       "
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BLUE}[+]                    CONFIGURE WINGS                 [+]${NC}"
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-
-  read -p "Masukkan token Configure menjalankan wings: " wings
-  eval "$wings"
-  sudo systemctl restart wings
-
-  echo -e "                                                       "
-  echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${GREEN}[+]                 CONFIGURE WINGS SUKSES             [+]${NC}"
-  echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  sleep 2
-  clear
-}
-
-# 4. Create Node (Manual)
 create_node() {
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
@@ -274,7 +422,7 @@ create_node() {
   read -p "Masukkan jumlah maksimum disk space (dalam MB): " disk_space
   read -p "Masukkan Locid: " locid
 
-  cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; return; }
+  cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; exit 1; }
 
   php artisan p:location:make <<EOF
 $location_name
@@ -307,78 +455,140 @@ EOF
   echo -e "                                                       "
   sleep 2
   clear
+  exit 0
 }
 
-# 5. Uninstall Panel
-uninstall_panel() {
+configure_wings() {
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BLUE}[+]                    UNINSTALL PANEL                 [+]${NC}"
+  echo -e "${BLUE}[+]                    CONFIGURE WINGS                 [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
 
-  bash <(curl -s https://pterodactyl-installer.se) <<EOF
-y
-y
-y
-y
+  read -p "Masukkan token Configure menjalankan wings: " wings
+  eval "$wings"
+  sudo systemctl start wings
+
+  echo -e "                                                       "
+  echo -e "${GREEN}[+] =============================================== [+]${NC}"
+  echo -e "${GREEN}[+]                 CONFIGURE WINGS SUKSES             [+]${NC}"
+  echo -e "${GREEN}[+] =============================================== [+]${NC}"
+  echo -e "                                                       "
+  sleep 2
+  clear
+  exit 0
+}
+
+setup_multi_nodes() {
+  echo -e "                                                       "
+  echo -e "${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "${BLUE}[+]               SETUP MULTI NODES (NODE 2+)       [+]${NC}"
+  echo -e "${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "                                                       "
+
+  echo -e "${YELLOW}MASUKKAN DOMAIN NODE BARU (ex: node2.zelix.adit.web.id) :${NC}"
+  read -r NODE_DOMAIN
+  echo -e "${YELLOW}MASUKKAN DAEMON PORT BARU (ex: 8081) :${NC}"
+  read -r DAEMON_PORT
+  echo -e "${YELLOW}MASUKKAN SFTP PORT BARU (ex: 2023) :${NC}"
+  read -r SFTP_PORT
+
+  if [ -z "$NODE_DOMAIN" ] || [ -z "$DAEMON_PORT" ] || [ -z "$SFTP_PORT" ]; then
+    echo -e "${RED}[X] Error: Semua data wajib diisi! Proses dibatalkan.${NC}"
+    sleep 3
+    return
+  fi
+
+  NODE_SUFFIX="${DAEMON_PORT}"
+
+  echo -e "\n${GREEN}[*] Membuka Firewall Port ${DAEMON_PORT} & ${SFTP_PORT}...${NC}"
+  if command -v ufw &> /dev/null; then
+    sudo ufw allow $DAEMON_PORT/tcp
+    sudo ufw allow $SFTP_PORT/tcp
+    sudo ufw reload
+  fi
+
+  echo -e "\n${GREEN}[*] Mematikan Nginx Sementara & Request SSL Let's Encrypt...${NC}"
+  sudo systemctl stop nginx
+  sudo certbot certonly --standalone -d "$NODE_DOMAIN" --non-interactive --agree-tos --register-safely-without-email
+  
+  echo -e "\n${GREEN}[*] Menyalakan Kembali Nginx Server...${NC}"
+  sudo systemctl start nginx
+
+  if [ ! -f "/etc/letsencrypt/live/$NODE_DOMAIN/fullchain.pem" ]; then
+    echo -e "${RED}[X] SSL Gagal dibuat! Cek DNS Domain lu dulu.${NC}"
+    sleep 3
+    return
+  fi
+
+  echo -e "\n${GREEN}[*] Membuat Direktori & File Template Config Node...${NC}"
+  sudo mkdir -p /etc/pterodactyl${NODE_SUFFIX}
+
+  cat <<EOF > /etc/pterodactyl${NODE_SUFFIX}/config.yml
+# REPLACE ISI FILE INI DENGAN CONFIG ASLI DARI ENVELOPE CONFIGURATION DI PANEL!
+api:
+  host: 0.0.0.0
+  port: ${DAEMON_PORT}
+  ssl:
+    enabled: true
+    cert: /etc/letsencrypt/live/${NODE_DOMAIN}/fullchain.pem
+    key: /etc/letsencrypt/live/${NODE_DOMAIN}/privkey.pem
+  upload_limit: 100
+system:
+  data: /var/lib/pterodactyl/volumes
+  sftp:
+    bind_port: ${SFTP_PORT}
+allowed_mounts: []
 EOF
 
+  echo -e "\n${GREEN}[*] Membuat Rumah Service Systemd Baru (wings${NODE_SUFFIX})...${NC}"
+  cat <<EOF > /etc/systemd/system/wings${NODE_SUFFIX}.service
+[Unit]
+Description=Pterodactyl Wings Daemon (Node Port ${DAEMON_PORT})
+After=docker.service
+Requires=docker.service
+
+[Service]
+User=root
+WorkingDirectory=/root
+LimitNOFILE=1048576
+LimitNPROC=512000
+ExecStart=/usr/local/bin/wings --config /etc/pterodactyl${NODE_SUFFIX}/config.yml
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  echo -e "\n${GREEN}[*] Reloading Daemon & Mendaftarkan Service Baru...${NC}"
+  sudo systemctl daemon-reload
+  sudo systemctl enable wings${NODE_SUFFIX}
+
   echo -e "                                                       "
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${GREEN}[+]                 UNINSTALL PANEL SUKSES             [+]${NC}"
+  echo -e "${GREEN}[+]             SETUP NODES SELESAI!          [+]${NC}"
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  sleep 2
-  clear
+  echo -e "Langkah Selanjutnya:"
+  echo -e "1. Buka file config: ${YELLOW}nano /etc/pterodactyl${NODE_SUFFIX}/config.yml${NC}"
+  echo -e "2. Tempel token, uuid, token_id asli dari panel lu."
+  echo -e "3. Jalankan nodenya: ${GREEN}sudo systemctl start wings${NODE_SUFFIX}${NC}"
+  echo -e "====================================================="
+  read -p "Tekan Enter untuk kembali ke menu utama..."
 }
 
-# 6. Stellar Theme
-install_themeSteeler() {
-  echo -e "                                                       "
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BLUE}[+]                  INSTALLASI THEMA               [+]${NC}"
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                                   "
-
-  wget -O /root/C2.zip https://github.com/gitfdil1248/thema/raw/main/C2.zip
-  unzip -o /root/C2.zip -d /root/pterodactyl
-  sudo cp -rfT /root/pterodactyl /var/www/pterodactyl
-
-  curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-  sudo apt install -y nodejs
-  sudo npm i -g yarn
-
-  cd /var/www/pterodactyl || return
-  yarn add react-feather
-  php artisan migrate
-  yarn build:production
-  php artisan view:clear
-
-  sudo rm /root/C2.zip
-  sudo rm -rf /root/pterodactyl
-
-  echo -e "                                                       "
-  echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${GREEN}[+]                   INSTALL SUCCESS               [+]${NC}"
-  echo -e "${GREEN}[+] =============================================== [+]${NC}"
-  echo -e ""
-  sleep 2
-  clear
-}
-
-# 7. Hack Back Panel
 hackback_panel() {
   echo -e "                                                       "
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BLUE}[+]                    HACK BACK PANEL                 [+]${NC}"
   echo -e "${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  
   read -p "Masukkan Username Panel: " user
-  read -p "password login: " psswdhb
-
-  cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; return; }
+  read -p "password login " psswdhb
+  
+  cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; exit 1; }
 
   php artisan p:user:make <<EOF
 yes
@@ -388,27 +598,25 @@ $user
 $user
 $psswdhb
 EOF
-
   echo -e "                                                       "
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${GREEN}[+]                 AKUN TELAH DI ADD             [+]${NC}"
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 2
-  clear
+  exit 0
 }
 
-# 8. Ubah Pw Vps
 ubahpw_vps() {
   echo -e "                                                       "
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${GREEN}[+]                    UBAH PASSWORD VPS       [+]${NC}"
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  
   read -p "Masukkan Pw Baru: " pw
-  
-  passwd root <<EOF
+  read -p "Masukkan Ulang Pw Baru " pw
+
+  passwd <<EOF
 $pw
 $pw
 EOF
@@ -419,383 +627,51 @@ EOF
   echo -e "${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 2
-  clear
+  exit 0
 }
 
-# =========================================================
-# 9. MENU BARU: AUTO INSTALL PANEL ALL-IN-ONE + AUTO UPLOAD EGGS
-# =========================================================
-auto_install_panel_complete() {
-  echo -e "                                                       "
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${WHITE}[+]    AUTO INSTALL PANEL, WINGS, NODE & EGGS       [+]${NC}"
-  echo -e "${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-
-  # Minta input sesuai request
-  echo -e "${YELLOW}MASUKIN DOMAIN PANEL (contoh: panel.xyz.com):${NC}"
-  read -r domainPanel
-  echo -e "${YELLOW}MASUKIN NODE DOMAIN (contoh: node.xyz.com):${NC}"
-  read -r domainNode
-  echo -e "${YELLOW}MASUKIN RAM (dalam MB, contoh: 4096):${NC}"
-  read -r memory
-  echo -e "${YELLOW}MASUKIN DISK SPACE (dalam MB, contoh: 10240):${NC}"
-  read -r disk_space
-
-  # Generate credentials acak persis logika js: "jhon" + random string
-  local rand4=$(generate_random_string 4)
-  local rand6=$(generate_random_string 6)
-  local user="jhon${rand4}"
-  local pass="jhon${rand6}"
-
-  echo -e "\n${BLUE}[*] Memulai Instalasi Panel Pterodactyl... (Tunggu ~5 Menit)${NC}"
-
-  # STEP 1: Jalankan Script Installer Panel Utama secara otomatis
-  bash <(curl -s https://pterodactyl-installer.se) <<EOF
-0
-$user
-$user
-$pass
-Asia/Jakarta
-jhon@gmail.com
-jhon@gmail.com
-$user
-jhon
-jhon
-$domainPanel
-y
-y
-1
-y
-y
-EOF
-
-  echo -e "\n${GREEN}[✅] Panel Selesai Di-install!${NC}"
-  echo -e "${BLUE}[*] Melanjutkan Instalasi Wings otomatis...${NC}"
-
-  # STEP 2: Jalankan Script Installer Wings secara otomatis
-  bash <(curl -s https://pterodactyl-installer.se) <<EOF
-1
-y
-y
-y
-$domainPanel
-y
-$user
-$pass
-$domainNode
-jhon@gmail.com
-y
-y
-y
-y
-A
-1
-y
-y
-EOF
-
-  echo -e "\n${GREEN}[✅] Wings Selesai Di-install!${NC}"
-  echo -e "${BLUE}[*] Membuat Node Lokasi otomatis...${NC}"
-
-  # STEP 3: Create Node menggunakan script Github Bangsano
-  bash <(curl -s https://raw.githubusercontent.com/Bangsano/Autoinstaller-Theme-Pterodactyl/main/createnode.sh) <<EOF
-SGP
-Jhonaley Tech
-$domainNode
-NODE BY JHON
-$memory
-$disk_space
-1
-EOF
-
-  echo -e "\n${BLUE}[*] Sinkronisasi Konfigurasi & Restarting Wings...${NC}"
-
-  # STEP 4: Konfigurasi config.yml node ID 1 dan jalankan service wings
-  cd /var/www/pterodactyl && php artisan p:node:configuration 1 > /etc/pterodactyl/config.yml && chmod 600 /etc/pterodactyl/config.yml
-  sudo systemctl restart wings
-
-    # =========================================================
-  # STEP 5: PROSES AUTO UPLOAD/IMPORT EGGS (NODEJS & PYTHON)
-  # =========================================================
-  echo -e "\n${BLUE}[*] Membuat dan Mengimport Eggs Otomatis...${NC}"
+# FUNGSI COMBINE LOGO LAMA & LIVE STATUS NEOFETCH TEXT
+show_legacy_neofetch() {
+  # Ambil data sistem dinamis
+  local os_info=$(lsb_release -ds 2>/dev/null || cat /etc/os-release | grep "PRETTY_NAME" | cut -d'"' -f2 || echo "Linux")
+  local host_info=$(cat /sys/devices/virtual/dmi/id/product_name 2>/dev/null || echo "KVM/QEMU VPS Server")
+  local kernel_info=$(uname -r)
+  local uptime_info=$(uptime -p | sed 's/up //')
+  local packages_count=$(dpkg-query -f '${binary:Package}\n' -W 2>/dev/null | wc -l || echo "0")
+  local shell_info="bash $(echo $BASH_VERSION | cut -d'(' -f1)"
+  local cpu_info=$(lscpu | grep 'Model name' | cut -d':' -f2 | sed -e 's/^[ \t]*//' || echo "Unknown CPU")
   
-  # Membuat folder sementara untuk menampung file egg json
-  mkdir -p /root/ptero_eggs
+  local mem_used=$(free -m | awk '/Mem:/ {print $3}')
+  local mem_total=$(free -m | awk '/Mem:/ {print $2}')
+  local disk_used=$(df -h / | awk 'NR==2 {print $3}')
+  local disk_total=$(df -h / | awk 'NR==2 {print $2}')
 
-  # 1. Menulis file JSON Egg NodeJS Jhonaley
-  cat << 'EOF' > /root/ptero_eggs/nodejs_jhonaley.json
-{
-    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
-    "meta": {
-        "version": "PTDL_v2",
-        "update_url": null
-    },
-    "exported_at": "2026-04-15T23:44:52+07:00",
-    "name": "Jhonaley\ud83d\ude80",
-    "author": "jhonaley-official@gmail.com",
-    "description": null,
-    "features": null,
-    "docker_images": {
-        "ghcr.io\/parkervcp\/yolks:nodejs_24": "ghcr.io\/parkervcp\/yolks:nodejs_24",
-        "ghcr.io\/parkervcp\/yolks:nodejs_23": "ghcr.io\/parkervcp\/yolks:nodejs_23",
-        "ghcr.io\/parkervcp\/yolks:nodejs_22": "ghcr.io\/parkervcp\/yolks:nodejs_22",
-        "ghcr.io\/parkervcp\/yolks:nodejs_21": "ghcr.io\/parkervcp\/yolks:nodejs_21",
-        "ghcr.io\/parkervcp\/yolks:nodejs_20": "ghcr.io\/parkervcp\/yolks:nodejs_20",
-        "ghcr.io\/parkervcp\/yolks:nodejs_19": "ghcr.io\/parkervcp\/yolks:nodejs_19",
-        "ghcr.io\/parkervcp\/yolks:nodejs_18": "ghcr.io\/parkervcp\/yolks:nodejs_18",
-        "ghcr.io\/parkervcp\/yolks:nodejs_17": "ghcr.io\/parkervcp\/yolks:nodejs_17",
-        "ghcr.io\/parkervcp\/yolks:nodejs_16": "ghcr.io\/parkervcp\/yolks:nodejs_16",
-        "ghcr.io\/parkervcp\/yolks:nodejs_15": "ghcr.io\/parkervcp\/yolks:nodejs_15",
-        "ghcr.io\/parkervcp\/yolks:nodejs_14": "ghcr.io\/parkervcp\/yolks:nodejs_14",
-        "ghcr.io\/parkervcp\/yolks:nodejs_13": "ghcr.io\/parkervcp\/yolks:nodejs_13",
-        "ghcr.io\/parkervcp\/yolks:nodejs_12": "ghcr.io\/parkervcp\/yolks:nodejs_12",
-        "ghcr.io\/parkervcp\/yolks:nodejs_11": "ghcr.io\/parkervcp\/yolks:nodejs_11",
-        "ghcr.io\/parkervcp\/yolks:nodejs_10": "ghcr.io\/parkervcp\/yolks:nodejs_10",
-        "ghcr.io\/parkervcp\/yolks:nodejs_9": "ghcr.io\/parkervcp\/yolks:nodejs_9",
-        "ghcr.io\/parkervcp\/yolks:nodejs_8": "ghcr.io\/parkervcp\/yolks:nodejs_8",
-        "ghcr.io\/parkervcp\/yolks:nodejs_7": "ghcr.io\/parkervcp\/yolks:nodejs_7",
-        "ghcr.io\/parkervcp\/yolks:nodejs_6": "ghcr.io\/parkervcp\/yolks:nodejs_6",
-        "ghcr.io\/parkervcp\/yolks:nodejs_5": "ghcr.io\/parkervcp\/yolks:nodejs_5",
-        "ghcr.io\/parkervcp\/yolks:nodejs_4": "ghcr.io\/parkervcp\/yolks:nodejs_4",
-        "ghcr.io\/parkervcp\/yolks:nodejs_3": "ghcr.io\/parkervcp\/yolks:nodejs_3",
-        "ghcr.io\/parkervcp\/yolks:nodejs_2": "ghcr.io\/parkervcp\/yolks:nodejs_2",
-        "ghcr.io\/parkervcp\/yolks:nodejs_1": "ghcr.io\/parkervcp\/yolks:nodejs_1"
-    },
-    "file_denylist": [],
-    "startup": "if [[ -d .git ]] && [[ {{AUTO_UPDATE}} == \"1\" ]]; then git pull; fi; if [[ ! -z ${NODE_PACKAGES} ]]; then \/usr\/local\/bin\/npm install ${NODE_PACKAGES}; fi; if [[ ! -z ${UNNODE_PACKAGES} ]]; then \/usr\/local\/bin\/npm uninstall ${UNNODE_PACKAGES}; fi; if [ -f \/home\/container\/package.json ]; then \/usr\/local\/bin\/npm install; fi;  if [[ ! -z ${CUSTOM_ENVIRONMENT_VARIABLES} ]]; then      vars=$(echo ${CUSTOM_ENVIRONMENT_VARIABLES} | tr \";\" \"\\n\");      for line in $vars;     do export $line;     done fi;  \/usr\/local\/bin\/${CMD_RUN};",
-    "config": {
-        "files": "{}",
-        "startup": "{\r\n    \"done\": \"running\"\r\n}",
-        "logs": "{}",
-        "stop": "^^C"
-    },
-    "scripts": {
-        "installation": {
-            "script": "#!\/bin\/bash\r\n# NodeJS App Installation Script\r\n#\r\n# Server Files: \/mnt\/server\r\napt update\r\napt install -y git curl jq file unzip make gcc g++ python python-dev libtool\r\n\r\nmkdir -p \/mnt\/server\r\ncd \/mnt\/server\r\n\r\nif [ \"${USER_UPLOAD}\" == \"true\" ] || [ \"${USER_UPLOAD}\" == \"1\" ]; then\r\n    echo -e \"assuming user knows what they are doing have a good day.\"\r\n    exit 0\r\nfi\r\n\r\n## add git ending if it's not on the address\r\nif [[ ${GIT_ADDRESS} != *.git ]]; then\r\n    GIT_ADDRESS=${GIT_ADDRESS}.git\r\nfi\r\n\r\nif [ -z \"${USERNAME}\" ] && [ -z \"${ACCESS_TOKEN}\" ]; then\r\n    echo -e \"using anon api call\"\r\nelse\r\n    GIT_ADDRESS=\"https:\/\/${USERNAME}:${ACCESS_TOKEN}@$(echo -e ${GIT_ADDRESS} | cut -d\/ -f3-)\"\r\nfi\r\n\r\n## pull git js repo\r\nif [ \"$(ls -A \/mnt\/server)\" ]; then\r\n    echo -e \"\/mnt\/server directory is not empty.\"\r\n    if [ -d .git ]; then\r\n        echo -e \".git directory exists\"\r\n        if [ -f .git\/config ]; then\r\n            echo -e \"loading info from git config\"\r\n            ORIGIN=$(git config --get remote.origin.url)\r\n        else\r\n            echo -e \"files found with no git config\"\r\n            echo -e \"closing out without touching things to not break anything\"\r\n            exit 10\r\n        fi\r\n    fi\r\n\r\n    if [ \"${ORIGIN}\" == \"${GIT_ADDRESS}\" ]; then\r\n        echo \"pulling latest from github\"\r\n        git pull\r\n    fi\r\nelse\r\n    echo -e \"\/mnt\/server is empty.\\ncloning files into repo\"\r\n    if [ -z ${BRANCH} ]; then\r\n        echo -e \"cloning default branch\"\r\n        git clone ${GIT_ADDRESS} .\r\n    else\r\n        echo -e \"cloning ${BRANCH}'\"\r\n        git clone --single-branch --branch ${BRANCH} ${GIT_ADDRESS} .\r\n    fi\r\n\r\nfi\r\n\r\necho \"Installing nodejs packages\"\r\nif [[ ! -z ${NODE_PACKAGES} ]]; then\r\n    \/usr\/local\/bin\/npm install ${NODE_PACKAGES}\r\nfi\r\n\r\nif [ -f \/mnt\/server\/package.json ]; then\r\n    \/usr\/local\/bin\/npm install --production\r\nfi\r\n\r\necho -e \"install complete\"\r\nexit 0",
-            "container": "node:14-buster-slim",
-            "entrypoint": "bash"
-        }
-    },
-    "variables": [
-        {
-            "name": "Git Repo Address",
-            "description": "GitHub Repo to clone\r\n\r\nI.E. https:\/\/github.com\/user_name\/repo_name",
-            "env_variable": "GIT_ADDRESS",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Install Branch",
-            "description": "The branch to install.",
-            "env_variable": "BRANCH",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Git Username",
-            "description": "Username to auth with git.",
-            "env_variable": "USERNAME",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Git Access Token",
-            "description": "Password to use with git.\r\n\r\nIt's best practice to use a Personal Access Token.\r\nhttps:\/\/github.com\/settings\/tokens\r\nhttps:\/\/gitlab.com\/-\/profile\/personal_access_tokens",
-            "env_variable": "ACCESS_TOKEN",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Command Run",
-            "description": "The command to start the bot",
-            "env_variable": "CMD_RUN",
-            "default_value": "npm start",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        }
-    ]
-}
-EOF
-
-  # 2. Menulis file JSON Egg Python Generic
-  cat << 'EOF' > /root/ptero_eggs/python_generic.json
-{
-    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
-    "meta": {
-        "version": "PTDL_v2",
-        "update_url": null
-    },
-    "exported_at": "2026-04-15T23:44:53+07:00",
-    "name": "python generic",
-    "author": "parker@parkervcp.com",
-    "description": "A Generic Python Egg for Pterodactyl\r\n\r\nTested with: https:\/\/github.com\/Ispira\/pixel-bot",
-    "features": null,
-    "docker_images": {
-        "Python 3.12": "ghcr.io\/parkervcp\/yolks:python_3.12",
-        "Python 3.11": "ghcr.io\/parkervcp\/yolks:python_3.11",
-        "Python 3.10": "ghcr.io\/parkervcp\/yolks:python_3.10",
-        "Python 3.9": "ghcr.io\/parkervcp\/yolks:python_3.9",
-        "Python 3.8": "ghcr.io\/parkervcp\/yolks:python_3.8",
-        "Python 3.7": "ghcr.io\/parkervcp\/yolks:python_3.7",
-        "Python 2.7": "ghcr.io\/parkervcp\/yolks:python_2.7"
-    },
-    "file_denylist": [],
-    "startup": "if [[ -d .git ]] && [[ \"{{AUTO_UPDATE}}\" == \"1\" ]]; then git pull; fi; if [[ ! -z \"{{PY_PACKAGES}}\" ]]; then pip install -U --prefix .local {{PY_PACKAGES}}; fi; if [[ -f \/home\/container\/${REQUIREMENTS_FILE} ]]; then pip install -U --prefix .local -r ${REQUIREMENTS_FILE}; fi; \/usr\/local\/bin\/python \/home\/container\/{{PY_FILE}}",
-    "config": {
-        "files": "{}",
-        "startup": "{\r\n    \"done\": \"change this part\"\r\n}",
-        "logs": "{}",
-        "stop": "^C"
-    },
-    "scripts": {
-        "installation": {
-            "script": "#!\/bin\/bash\r\n# Python App Installation Script\r\n#\r\n# Server Files: \/mnt\/server\r\napt update\r\napt install -y git curl jq file unzip make gcc g++ libtool\r\n\r\nmkdir -p \/mnt\/server\r\ncd \/mnt\/server\r\n\r\nif [ \"${USER_UPLOAD}\" == \"true\" ] || [ \"${USER_UPLOAD}\" == \"1\" ]; then\r\n    echo -e \"assuming user knows what they are doing have a good day.\"\r\n    exit 0\r\nfi\r\n\r\n## add git ending if it's not on the address\r\nif [[ ${GIT_ADDRESS} != *.git ]]; then\r\n    GIT_ADDRESS=${GIT_ADDRESS}.git\r\nfi\r\n\r\nif [ -z \"${USERNAME}\" ] && [ -z \"${ACCESS_TOKEN}\" ]; then\r\n    echo -e \"using anon api call\"\r\nelse\r\n    GIT_ADDRESS=\"https:\/\/${USERNAME}:${ACCESS_TOKEN}@$(echo -e ${GIT_ADDRESS} | cut -d\/ -f3-)\"\r\nfi\r\n\r\n## pull git python repo\r\nif [ \"$(ls -A \/mnt\/server)\" ]; then\r\n    echo -e \"\/mnt\/server directory is not empty.\"\r\n    if [ -d .git ]; then\r\n        echo -e \".git directory exists\"\r\n        if [ -f .git\/config ]; then\r\n            echo -e \"loading info from git config\"\r\n            ORIGIN=$(git config --get remote.origin.url)\r\n        else\r\n            echo -e \"files found with no git config\"\r\n            echo -e \"closing out without touching things to not break anything\"\r\n            exit 10\r\n        fi\r\n    fi\r\n\r\n    if [ \"${ORIGIN}\" == \"${GIT_ADDRESS}\" ]; then\r\n        echo \"pulling latest from github\"\r\n        git pull\r\n    fi\r\nelse\r\n    echo -e \"\/mnt\/server is empty.\\ncloning files into repo\"\r\n    if [ -z ${BRANCH} ]; then\r\n        echo -e \"cloning default branch\"\r\n        git clone ${GIT_ADDRESS} .\r\n    else\r\n        echo -e \"cloning ${BRANCH}'\"\r\n        git clone --single-branch --branch ${BRANCH} ${GIT_ADDRESS} .\r\n    fi\r\n\r\nfi\r\n\r\nexport HOME=\/mnt\/server\r\n\r\necho \"Installing python requirements into folder\"\r\nif [[ ! -z ${PY_PACKAGES} ]]; then\r\n    pip install -U --prefix .local ${PY_PACKAGES}\r\nfi\r\n\r\nif [ -f \/mnt\/server\/requirements.txt ]; then\r\n    pip install -U --prefix .local -r ${REQUIREMENTS_FILE}\r\nfi\r\n\r\necho -e \"install complete\"\r\nexit 0",
-            "container": "python:3.8-slim-bookworm",
-            "entrypoint": "bash"
-        }
-    },
-    "variables": [
-        {
-            "name": "Git Repo Address",
-            "description": "Git repo to clone\r\n\r\nI.E. https:\/\/github.com\/parkervcp\/repo_name",
-            "env_variable": "GIT_ADDRESS",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Git Branch",
-            "description": "What branch to pull from github.\r\n\r\nDefault is blank to pull the repo default branch",
-            "env_variable": "BRANCH",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Auto Update",
-            "description": "Pull the latest files on startup when using a GitHub repo.",
-            "env_variable": "AUTO_UPDATE",
-            "default_value": "0",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|boolean",
-            "field_type": "text"
-        },
-        {
-            "name": "App py file",
-            "description": "The file that starts the App.",
-            "env_variable": "PY_FILE",
-            "default_value": "app.py",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Additional Python packages",
-            "description": "Install additional python packages.\r\n\r\nUse spaces to separate",
-            "env_variable": "PY_PACKAGES",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Git Username",
-            "description": "Username to auth with git.",
-            "env_variable": "USERNAME",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Git Access Token",
-            "description": "Password to use with git.\r\n\r\nIt's best practice to use a Personal Access Token.\r\nhttps:\/\/github.com\/settings\/tokens\r\nhttps:\/\/gitlab.com\/-\/profile\/personal_access_tokens",
-            "env_variable": "ACCESS_TOKEN",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Requirements file",
-            "description": "if there are other requirements files to choose from.",
-            "env_variable": "REQUIREMENTS_FILE",
-            "default_value": "requirements.txt",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        }
-    ]
-}
-EOF
-
-  # Pindah ke direktori panel untuk eksekusi import via CLI artisan
-  cd /var/www/pterodactyl || return
-
-  # Import otomatis ke Nest ID 1 (Nest default bawaan panel baru)
-  if [ -f "/root/ptero_eggs/nodejs_jhonaley.json" ]; then
-    php artisan p:egg:import --file=/root/ptero_eggs/nodejs_jhonaley.json --nest=1 > /dev/null 2>&1
-    echo -e "${GREEN}[🥚] Egg Jhonaley🚀 (NodeJS) berhasil di-import!${NC}"
-  fi
-
-  if [ -f "/root/ptero_eggs/python_generic.json" ]; then
-    php artisan p:egg:import --file=/root/ptero_eggs/python_generic.json --nest=1 > /dev/null 2>&1
-    echo -e "${GREEN}[🥚] Egg Python Generic berhasil di-import!${NC}"
-  fi
-
-  # Hapus folder sementara agar VPS tetap bersih
-  rm -rf /root/ptero_eggs
-  # =========================================================
-
-  clear
-  echo -e "                                                       "
-  echo -e "${GREEN}[+] =================================================== [+]${NC}"
-  echo -e "${GREEN}[+]               INSTALASI ALL-IN-ONE BERHASIL!        [+]${NC}"
-  echo -e "${GREEN}[+] =================================================== [+]${NC}"
-  echo -e ""
-  echo -e "📍 ${YELLOW}Domain Panel :${NC} https://${domainPanel}"
-  echo -e "🖥️  ${YELLOW}Domain Node  :${NC} https://${domainNode}"
-  echo -e ""
-  echo -e "👤 ${YELLOW}Username     :${NC} ${user}"
-  echo -e "🔐 ${YELLOW}Password     :${NC} ${pass}"
-  echo -e ""
-  echo -e "${GREEN}🥚 Eggs Status  : 2 Eggs Berhasil dimasukkan ke Nest ID 1${NC}"
-  echo -e ""
-  echo -e "${BLUE}Panel, Wings, dan Node Anda sudah otomatis aktif.${NC}"
-  echo -e "${RED}⚠️  JANGAN LUPA:${NC} Tambahkan Alokasi IP/Port secara manual di panel admin sebelum membuat server."
-  echo -e "                                                       "
-  echo -e "Tekan [Enter] untuk kembali ke menu awal..."
-  read -r
+  # Cetak Logo Lama (Tengkorak) Berdampingan Dengan Status Dinamis
+  echo -e "${RED}        _,gggggggggg.                                     ${NC}${RED}root${NC}@${RED}Axata${NC}"
+  echo -e "${RED}    ,ggggggggggggggggg.                                   ${NC}--------"
+  echo -e "${RED}  ,ggggg        gggggggg.                                 ${NC}${GREEN}OS:${NC} $os_info"
+  echo -e "${RED} ,ggg'               'ggg.                                ${NC}${GREEN}Host:${NC} $host_info"
+  echo -e "${RED}',gg       ,ggg.      'ggg:                               ${NC}${GREEN}Kernel:${NC} $kernel_info"
+  echo -e "${RED}'ggg      ,gg'''  .    ggg                                ${NC}${GREEN}Uptime:${NC} $uptime_info"
+  echo -e "${RED}gggg      gg     ,     ggg                                ${NC}${GREEN}Packages:${NC} $packages_count (dpkg)"
+  echo -e "${WHITE}ggg:     gg.     -   ,ggg                                 ${NC}${GREEN}Shell:${NC} $shell_info"
+  echo -e "${WHITE} ggg:     ggg._    _,ggg                                  ${NC}${GREEN}CPU:${NC} $cpu_info"
+  echo -e "${WHITE} ggg.    '.'''ggggggp                                     ${NC}${GREEN}Memory:${NC} ${mem_used}MiB / ${mem_total}MiB"
+  echo -e "${WHITE}  'ggg    '-.__                                           ${NC}${GREEN}Disk Space:${NC} ${disk_used} / ${disk_total}"
+  echo -e "${WHITE}    ggg                                                   ${NC}"
+  echo -e "${WHITE}      ggg                                                 ${NC}${WHITE}Color Palette:${NC}"
+  echo -e "${WHITE}        ggg.                                              ${NC}\033[40m   \033[41m   \033[42m   \033[43m   \033[44m   \033[45m   \033[46m   \033[47m   \033[0m"
+  echo -e "${WHITE}          ggg.                                            ${NC}"
+  echo -e "${WHITE}             b.                                           ${NC}"
 }
 
-# ==========================================
-# Alur Eksekusi Utama (Main Script)
-# ==========================================
+# Cek Root di awal script
+if [ "$EUID" -ne 0 ]; then
+  echo -e "${RED}Harap jalankan script ini sebagai root (sudo su)${NC}"
+  exit 1
+fi
+
+# Main script
 display_welcome
 install_jq
 check_token
@@ -803,49 +679,47 @@ check_token
 while true; do
   clear
   echo -e "                                                                     "
-  echo -e "${RED}        _,gggggggggg.                                     ${NC}"
-  echo -e "${RED}    ,ggggggggggggggggg.                                   ${NC}"
-  echo -e "${RED}  ,ggggg        gggggggg.                                 ${NC}"
-  echo -e "${RED} ,ggg'               'ggg.                                ${NC}"
-  echo -e "${RED}',gg       ,ggg.      'ggg:                               ${NC}"
-  echo -e "${RED}'ggg      ,gg'''  .    ggg       Auto Installer ZeroDeveloper Private   ${NC}"
-  echo -e "${RED}gggg      gg     ,     ggg      ------------------------  ${NC}"
-  echo -e "${WHITE}ggg:     gg.     -   ,ggg       • WhatsApp : 6285854642521    ${NC}"
-  echo -e "${WHITE} ggg:     ggg._    _,ggg        • Credit  : RevanBotz ${NC}"
-  echo -e "${WHITE} ggg.    '.'''ggggggp           • Support by Revan Botz  ${NC}"
-  echo -e "${WHITE}  'ggg    '-.__                                           ${NC}"
-  echo -e "${WHITE}    ggg                                                   ${NC}"
-  echo -e "${WHITE}      ggg                                                 ${NC}"
-  echo -e "${WHITE}        ggg.                                              ${NC}"
-  echo -e "${WHITE}          ggg.                                            ${NC}"
-  echo -e "${WHITE}             b.                                           ${NC}"
+  
+  # Cetak Logo Lama + Status Dinamis
+  show_legacy_neofetch
+  
   echo -e "                                                                     "
-  echo -e "BERIKUT LIST INSTALL :"
-  echo "1. Install theme"
-  echo "2. Uninstall theme"
-  echo "3. Configure Wings"
-  echo "4. Create Node"
-  echo "5. Uninstall Panel"
-  echo "6. Stellar Theme"
-  echo "7. Hack Back Panel"
-  echo "8. Ubah Pw Vps"
-  echo "9. Auto Install Panel (All-in-One)"
-  echo "x. Exit"
-  echo -e "Masukkan pilihan 1/2/9/x:"
+  echo -e " ${BLUE}[+] ======================================================== [+]${NC}"
+  echo -e "      Auto Installer Zelix Private - Menu System"
+  echo -e " ${BLUE}[+] ======================================================== [+]${NC}"
+  echo -e " BERIKUT LIST INSTALL :"
+  echo -e " 1. Install Theme (Multi-Theme Pack)"
+  echo -e " 2. Configure Wings"
+  echo -e " 3. Create Node"
+  echo -e " 4. Hack Back Panel"
+  echo -e " 5. Setup Multi Nodes"
+  echo -e " 6. Ubah Pw Vps"
+  echo -e " x. Exit"
+  echo -e " ------------------------------------------------------------"
+  echo -e " Masukkan pilihan:"
   read -r MENU_CHOICE
   clear
 
   case "$MENU_CHOICE" in
-    1) install_theme ;;
-    2) uninstall_theme ;;
-    3) configure_wings ;;
-    4) create_node ;;
-    5) uninstall_panel ;;
-    6) install_themeSteeler ;;
-    7) hackback_panel ;;
-    8) ubahpw_vps ;;
-    9) auto_install_panel_complete ;;
-    x|X)
+    1)
+      install_multi_theme_menu
+      ;;
+    2)
+      configure_wings
+      ;;
+    3)
+      create_node
+      ;;
+    4)
+      hackback_panel
+      ;;
+    5)
+      setup_multi_nodes
+      ;;
+    6)
+      ubahpw_vps
+      ;;
+    x)
       echo "Keluar dari skrip."
       exit 0
       ;;
